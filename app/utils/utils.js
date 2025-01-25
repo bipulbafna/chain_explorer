@@ -8,4 +8,4 @@ export const isValidAddress = (address) => {
   } catch (error) {
     return false;
   }
-};
+}
