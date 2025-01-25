@@ -15,7 +15,7 @@ export default function Home() {
     showToast,
     actionType,
     inputValue,
-    logs,
+    transactionData,
     isWalletConnected,
     isToast,
     message
@@ -60,7 +60,7 @@ export default function Home() {
             value={actionType}
             onChange={handleDropDown}
           >
-            <option value="transfer">Transfer</option>
+            <option value="transfer">Balance Transfer</option>
             <option value="dataSubmit">Data Submit</option>
           </select>
         </div>
@@ -89,26 +89,27 @@ export default function Home() {
           {!!errorMessage && <div className="text-red-600 dark:text-red-600">{errorMessage}</div>}
         </div>
 
-        {(!!logs?.length) && <div className="mt-8">
+        {(!!transactionData?.length) && <div className="mt-8">
           <h2 className="text-xl font-bold text-white">Action Logs</h2>
           <Table
-            bodyItems={[["Transfer", "Transfer To x", "12334"], ["Transfer", "Transfer To x", "12334"]]}
+            bodyItems={transactionData}
             headerItems={["Type", "Details", "Hash"]}
           />
         </div>}
 
-       { isToast && <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white p-4 rounded-lg shadow-lg w-1/4">
+        {isToast && <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white p-4 rounded-lg shadow-lg w-1/4">
           <strong className="font-bold">Error!</strong>
           <p>{message}</p>
           <div className="flex justify-end mt-4">
             <button
-              onClick={()=>showToast(false,"")}
+              onClick={() => showToast(false, "")}
               className="ml-4 px-2 py-1 bg-black text-white rounded hover:bg-gray-800"
             >
               Close
             </button>
           </div>
-        </div>}
+        </div>
+        }
       </div>
     </>
 

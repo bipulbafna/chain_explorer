@@ -2,8 +2,12 @@ import { create } from 'zustand';
 
 export const useStore = create((set) => ({
   count: 0,
-  isToast:false,
+  isToast: false,
   message: "",
-  showToast: (enabled, message) => set(() => ({ isToast: enabled , message})),
+  transactionData: [],
+  showToast: (enabled, message) => set(() => ({ isToast: enabled, message })),
   decrement: () => set((state) => ({ count: state.count - 1 })),
+  setTransactionData: (logs) => set((state) => {
+    return { transactionData: [...state.transactionData, logs] }
+  })
 }));
