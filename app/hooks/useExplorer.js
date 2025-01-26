@@ -64,6 +64,7 @@ export const useExplorer = () => {
               setAvailApi(api)
             }
             const testAccount = getKeyringFromSeed(config?.seed)
+            const toAccount = account?.meta?.name || account?.meta?.source
             // balance transfer
            if(actionType ==="transfer"){
             const uniqueTxn= crypto.randomUUID()
@@ -75,21 +76,21 @@ export const useExplorer = () => {
                 return showToast(true, "Insufficient Wallet Balance. Please add balance to transfer.");
             }
             const txResult = await new Promise((res) => {
-            const transferredData =  api.tx.balances.transferKeepAlive(config.recipient, amount)
+            const transferredData =  api.tx.balances.transferKeepAlive(account.address, amount)
             const time = moment(Date.now()).format('D MMM h:mmA')
-            setTransactionData({[uniqueTxn]:[testAccount.address,config.recipient,inputValue,time,"In Progress"]})
+            setTransactionData({[uniqueTxn]:[testAccount.address,toAccount,inputValue,time,"In Progress"]})
             setInputValue("")
             setLoading(false);
             transferredData .signAndSend(testAccount, { app_id: 0, nonce: -1 }, (result) => {
                 if(result.isError){
-                setTransactionData({[uniqueTxn]:[testAccount.address,config.recipient,inputValue,time,"Error"]})
+                setTransactionData({[uniqueTxn]:[testAccount.address,toAccount,inputValue,time,"Error"]})
                 }
                 if(result.isInBlock){
-                setTransactionData({[uniqueTxn]:[testAccount.address,config.recipient,inputValue,time,"InBlock"]})
+                setTransactionData({[uniqueTxn]:[testAccount.address,toAccount,inputValue,time,"InBlock"]})
                 }
                 if(result.isFinalized){
                 res(result);
-                setTransactionData({[uniqueTxn]:[testAccount.address,config.recipient,inputValue,time,"Finalized"]})
+                setTransactionData({[uniqueTxn]:[testAccount.address,toAccount,inputValue,time,"Finalized"]})
                 }
             })
             })
@@ -113,18 +114,18 @@ export const useExplorer = () => {
            }else{
             const time = moment(Date.now()).format('D MMM h:mmA')
             const tx = api.tx.dataAvailability.submitData(String(inputValue));
-            setSubmittedData({[inputValue]:[testAccount.address,account?.meta?.source,inputValue,time,"In Progress"]})
+            setSubmittedData({[inputValue]:[testAccount.address,toAccount,inputValue,time,"In Progress"]})
             setInputValue("")
             setLoading(false);
             tx.signAndSend(testAccount, {nonce: -1 }, (result) => {
                 if(result.isError){
-                 setSubmittedData({[inputValue]:[testAccount.address,account?.meta?.source,inputValue,time,"Error"]})
+                 setSubmittedData({[inputValue]:[testAccount.address,toAccount,inputValue,time,"Error"]})
                 }
                 if(result.isInBlock){
-                 setSubmittedData({[inputValue]:[testAccount.address,account?.meta?.source,inputValue,time,"InBlock"]})
+                 setSubmittedData({[inputValue]:[testAccount.address,toAccount,inputValue,time,"InBlock"]})
                 }
                 if(result.isFinalized){
-                 setSubmittedData({[inputValue]:[testAccount.address,account?.meta?.source,inputValue,time,"Finalized"]})
+                 setSubmittedData({[inputValue]:[testAccount.address,toAccount,inputValue,time,"Finalized"]})
                 }
              })
            }
