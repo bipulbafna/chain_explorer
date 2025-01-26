@@ -5,12 +5,24 @@ import moment from 'moment';
 import {formatNumberToBalance, getDecimals, getKeyringFromSeed, initialize } from "avail-js-sdk"
 import { useStore } from "../store/useStore";
 import config from '../config';
-const usePolkadotExtension = async () => {
-    if (typeof window !== "undefined") {
-      const { web3Enable, web3Accounts, web3FromAddress } = await import("@polkadot/extension-dapp");
-      return { web3Enable, web3Accounts, web3FromAddress };
-    }
-    return null;
+
+const usePolkadotExtension = () => {
+    const [extensionApis, setExtensionApis] = useState(null);
+  
+    useEffect(() => {
+      const loadExtension = async () => {
+        if (typeof window !== "undefined") {
+          const { web3Enable, web3Accounts, web3FromAddress } = await import(
+            "@polkadot/extension-dapp"
+          );
+          setExtensionApis({ web3Enable, web3Accounts, web3FromAddress });
+        }
+      };
+  
+      loadExtension();
+    }, []);
+  
+    return extensionApis;
   };
 
 export const useExplorer = () => {
@@ -21,27 +33,23 @@ export const useExplorer = () => {
     const [actionType, setActionType] = useState("transfer");
     const [inputValue, setInputValue] = useState("");
     const [account, setAccount] = useState(null);
+    const extensionApis = usePolkadotExtension();
 
     // Connect wallet
-    const ConnectWallet = async () => {
-        const extensionApis = await usePolkadotExtension();
-        if (!extensionApis) return;
-        const { web3Enable, web3Accounts } = extensionApis;
-        const extensions = await web3Enable("My DApp");
-        if (!extensions.length) {
+    const connectWallet = async () => {
+          const { web3Enable, web3Accounts } = extensionApis;
+          const extensions = await web3Enable("My DApp");
+          if (!extensions.length) {
             showToast(true, "Please install Polkadot.js extension!");
             return;
-        }
-        const accounts = await web3Accounts();
-        setAccount(accounts[0]);
-        if (!!accounts[0]) {
-            setIsWalletConnected(true)
-        }
+          }
+      
+          const accounts = await web3Accounts();
+          setAccount(accounts[0]);
+          if (accounts[0]) {
+            setIsWalletConnected(true);
+          }
     };
-
-    useEffect(()=>{
-     ConnectWallet();
-    },[])
 
     const handleAction = async () => {
         try{
@@ -127,7 +135,7 @@ export const useExplorer = () => {
     };
 
     return {
-        handleAction, connectWallet:ConnectWallet,
+        handleAction, connectWallet,
         actionType, setActionType,
         inputValue, setInputValue,
         transactionData, isWalletConnected,
