@@ -12,7 +12,6 @@ export default function Table({ headerItems, bodyItems }) {
         </tr>
       </thead>
       <tbody>
-
         {bodyItems?.map((item, index) => (
           <tr key={index} className="bg-gray-800 hover:bg-gray-700">
             {item?.map((itemKey) => {

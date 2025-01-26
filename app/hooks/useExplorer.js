@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { ApiPromise, WsProvider } from "@polkadot/api";
+import { useEffect, useState } from "react";
+import moment from 'moment';
+import {formatNumberToBalance, getDecimals, getKeyringFromSeed, initialize } from "avail-js-sdk"
 import { useStore } from "../store/useStore";
+import config from '../config';
 const usePolkadotExtension = async () => {
     if (typeof window !== "undefined") {
       const { web3Enable, web3Accounts, web3FromAddress } = await import("@polkadot/extension-dapp");
@@ -12,12 +14,15 @@ const usePolkadotExtension = async () => {
   };
 
 export const useExplorer = () => {
-    const { showToast, isToast, message, setTransactionData, transactionData } = useStore();
+    const { showToast, isToast, message, setTransactionData, transactionData, setSubmittedData,submittedData } = useStore();
+    const [availApi, setAvailApi] = useState(null);
+    const [loading, setLoading] = useState(false);
     const [isWalletConnected, setIsWalletConnected] = useState(false);
     const [actionType, setActionType] = useState("transfer");
     const [inputValue, setInputValue] = useState("");
     const [account, setAccount] = useState(null);
 
+    // Connect wallet
     const connectWallet = async () => {
         const extensionApis = await usePolkadotExtension();
         if (!extensionApis) return;
@@ -34,37 +39,90 @@ export const useExplorer = () => {
         }
     };
 
+    useEffect(()=>{
+     connectWallet();
+    },[])
+
     const handleAction = async () => {
-        if (!account) {
-            showToast(true, "Please connect your wallet first");
-            return;
-        }
-        const provider = new WsProvider("ws://127.0.0.1:9944"); // local node server
-        const api = await ApiPromise.create({ provider });
-        const { data: { free } } = await api.query.system.account(account.address);
-
-        if (free.toHuman() <= 0 && actionType === "transfer") {
-            return showToast(true, "Wallet balance is low. Please add balance to transfer.");
-        }
-
-        if (actionType === "transfer" && free.toHuman() > 0) {
-            const injector = await web3FromAddress(account.address);
-            const recipientAddress = inputValue;
-            const transferAmount = 0;
-
-            try {
-                const transfer = api.tx.balances.transferKeepAlive(recipientAddress, transferAmount);
-                const hash = await transfer.signAndSend(account.address, { signer: injector.signer });// comment this line to check the data from transaction, that's dummy data table
-                setTransactionData(["Balance Transfer", `Transfer to ${recipientAddress}`, (hash?.toHex() || "145YM4AKXbdwqPFsoWKK")]) // For the reference, but should be removed the dummy hash value
-                setInputValue("");
-            } catch (error) {
-                showToast(true, `Transfer failed: ${error.message}`);
+        try{
+            if (!account) {
+                showToast(true, "Please connect your wallet first");
+                return;
             }
-        } else if (actionType === "dataSubmit") {
-            // NOTE: Need to integarte the api for transfering user data
-            alert(`Submitting data: ${inputValue}`);
-            setTransactionData(["Data Submit", inputValue, `Transfer to ${account.address}`])
-            setInputValue("");
+            setLoading(true);
+            let api = availApi
+            if (!(api && api.isConnected)) {
+              api = await initialize(config?.endpoint);
+              setAvailApi(api)
+            }
+            const testAccount = getKeyringFromSeed(config?.seed)
+            // balance transfer
+           if(actionType ==="transfer"){
+            const uniqueTxn= crypto.randomUUID()
+            const decimals = getDecimals(api)
+            const amount = formatNumberToBalance(Number(inputValue), decimals)
+            const oldBalance = await api.query.system.account(testAccount?.address)
+            if(amount>oldBalance?.data?.free?.toHuman()){
+                setLoading(false);
+                return showToast(true, "Insufficient Wallet Balance. Please add balance to transfer.");
+            }
+            const txResult = await new Promise((res) => {
+            const transferredData =  api.tx.balances.transferKeepAlive(config.recipient, amount)
+            const time = moment(Date.now()).format('D MMM h:mmA')
+            setTransactionData({[uniqueTxn]:[testAccount.address,config.recipient,inputValue,time,"In Progress"]})
+            setInputValue("")
+            setLoading(false);
+            transferredData .signAndSend(testAccount, { app_id: 0, nonce: -1 }, (result) => {
+                if(result.isError){
+                setTransactionData({[uniqueTxn]:[testAccount.address,config.recipient,inputValue,time,"Error"]})
+                }
+                if(result.isInBlock){
+                setTransactionData({[uniqueTxn]:[testAccount.address,config.recipient,inputValue,time,"InBlock"]})
+                }
+                if(result.isFinalized){
+                res(result);
+                setTransactionData({[uniqueTxn]:[testAccount.address,config.recipient,inputValue,time,"Finalized"]})
+                }
+            })
+            })
+             // Error handling
+            const error = txResult.dispatchError
+            if (txResult.isError) {
+                setLoading(false);
+                showToast(true, `Transaction was not executed`);
+            } else if (error != undefined) {
+                if (error.isModule) {
+                    const decoded = api.registry.findMetaError(error.asModule)
+                    const { docs, name, section } = decoded
+                    setLoading(false);
+                    showToast(true, `Transaction failed: ${section}.${name}: ${docs.join(" ")}`);
+                } else {
+                    setLoading(false);
+                    showToast(true, `Transaction failed: ${error}`);
+                }
+            }
+           // Data Submit
+           }else{
+            const time = moment(Date.now()).format('D MMM h:mmA')
+            const tx = api.tx.dataAvailability.submitData(String(inputValue));
+            setSubmittedData({[inputValue]:[testAccount.address,account?.meta?.source,inputValue,time,"In Progress"]})
+            setInputValue("")
+            setLoading(false);
+            tx.signAndSend(testAccount, {nonce: -1 }, (result) => {
+                if(result.isError){
+                 setSubmittedData({[inputValue]:[testAccount.address,account?.meta?.source,inputValue,time,"Error"]})
+                }
+                if(result.isInBlock){
+                 setSubmittedData({[inputValue]:[testAccount.address,account?.meta?.source,inputValue,time,"InBlock"]})
+                }
+                if(result.isFinalized){
+                 setSubmittedData({[inputValue]:[testAccount.address,account?.meta?.source,inputValue,time,"Finalized"]})
+                }
+             })
+           }
+        }catch(err){
+            showToast(true, `${actionType} failed: ${err}`);
+            setLoading(false);
         }
     };
 
@@ -73,6 +131,7 @@ export const useExplorer = () => {
         actionType, setActionType,
         inputValue, setInputValue,
         transactionData, isWalletConnected,
-        isToast, showToast, message
+        isToast, showToast, message,
+        submittedData,loading
     }
 }

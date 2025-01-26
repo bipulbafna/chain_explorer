@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Table from "./components/Table";
 import { useExplorer } from './hooks/useExplorer';
-import { isValidAddress } from "./utils/utils";
 
 export default function Home() {
   const [errorMessage, setErrorMessage] = useState("");
@@ -18,14 +17,18 @@ export default function Home() {
     transactionData,
     isWalletConnected,
     isToast,
-    message
+    message,
+    submittedData,
+    loading
   } = useExplorer();
+  const isBalTransfer = actionType==="transfer";
+  const tableData = Object.values(isBalTransfer?transactionData:submittedData) ?? [];
 
   useEffect(() => {
     if (actionType === "transfer") {
-      const isValid = isValidAddress(inputValue)
-      if (!!inputValue && !isValid) {
-        setErrorMessage("Invalid Recipient Address. Please type right address.")
+      const isValid = Number(inputValue) >=1 ;
+      if (!!inputValue && !isValid ) {
+        setErrorMessage("Invalid amount")
       }
       if (!inputValue) {
         setErrorMessage("")
@@ -73,27 +76,35 @@ export default function Home() {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder={actionType === "transfer" ? "Enter recipient address" : "Enter data"}
+            placeholder={actionType === "transfer" ? "Enter Amount" : "Enter Data"}
             className="w-[80%] mt-2 p-2 border border-gray-700 rounded bg-gray-800 text-gray-200"
           />
           <button
             onClick={handleAction}
-            className={`w-[18%] mx-2 px-4 py-2 rounded text-white ${(!!errorMessage || !inputValue || !isWalletConnected)
+            className={`w-[18%] mx-2 px-4 py-2 rounded text-white ${(!!errorMessage || !inputValue || !isWalletConnected || !!loading)
               ? "bg-gray-500 cursor-not-allowed"
               : "bg-green-500 hover:bg-green-600"
               }`}
-            disabled={!!errorMessage || !inputValue}
+            disabled={!!errorMessage || !inputValue || !!loading}
           >
-            {actionType === "transfer" ? "Transfer Balance" : "Submit Data"}
+             {loading ? (
+            <div className="flex justify-center items-center space-x-2">
+              <div className="w-5 h-5 border-4 border-t-transparent border-white border-solid rounded-full animate-spin"></div>
+            </div>
+          ) : (
+            actionType === "transfer" ? "Transfer Balance" : "Submit Data"
+          )}
+            
           </button>
           {!!errorMessage && <div className="text-red-600 dark:text-red-600">{errorMessage}</div>}
         </div>
 
-        {(!!transactionData?.length) && <div className="mt-8">
-          <h2 className="text-xl font-bold text-white">Action Logs</h2>
+        {(!!tableData?.length) && <div className="mt-8">
+          <h2 className="text-xl font-bold text-white">{isBalTransfer?"Balance Transfer":
+          "Data Submission"}Logs</h2>
           <Table
-            bodyItems={transactionData}
-            headerItems={["Type", "Details", "Hash"]}
+            bodyItems={tableData}
+            headerItems={isBalTransfer?["From","To","Balance Transferred", "Time","Status"]:["From","To","Data", "Time","Status"]}
           />
         </div>}
 
