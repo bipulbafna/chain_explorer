@@ -101,7 +101,7 @@ export default function Home() {
 
         {(!!tableData?.length) && <div className="mt-8">
           <h2 className="text-xl font-bold text-white">{isBalTransfer?"Balance Transfer":
-          "Data Submission"}Logs</h2>
+          "Data Submission"} Logs</h2>
           <Table
             bodyItems={tableData}
             headerItems={isBalTransfer?["From","To","Balance Transferred", "Time","Status"]:["From","To","Data", "Time","Status"]}
