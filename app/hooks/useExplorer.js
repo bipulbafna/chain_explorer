@@ -23,7 +23,7 @@ export const useExplorer = () => {
     const [account, setAccount] = useState(null);
 
     // Connect wallet
-    const connectWallet = async () => {
+    const ConnectWallet = async () => {
         const extensionApis = await usePolkadotExtension();
         if (!extensionApis) return;
         const { web3Enable, web3Accounts } = extensionApis;
@@ -40,7 +40,7 @@ export const useExplorer = () => {
     };
 
     useEffect(()=>{
-     connectWallet();
+     ConnectWallet();
     },[])
 
     const handleAction = async () => {
@@ -127,7 +127,7 @@ export const useExplorer = () => {
     };
 
     return {
-        handleAction, connectWallet,
+        handleAction, connectWallet:ConnectWallet,
         actionType, setActionType,
         inputValue, setInputValue,
         transactionData, isWalletConnected,

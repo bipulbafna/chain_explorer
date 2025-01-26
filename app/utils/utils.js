@@ -5,7 +5,8 @@ export const isValidAddress = (address) => {
     const decoded = decodeAddress(address);
     encodeAddress(decoded);
     return true;
-  } catch (error) {
+  } catch (err) {
+    console.log(err);
     return false;
   }
 }
